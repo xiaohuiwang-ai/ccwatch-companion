@@ -1,0 +1,41 @@
+name: Bug report
+description: Something wrong with CC Watch on your wrist
+labels: [bug]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Watch model
+      placeholder: Descent G2
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CC Watch version
+      placeholder: v5.4 (store)
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect to see, and what did you see instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: link_light
+    attributes:
+      label: Data-link light color
+      options:
+        - Green (fresh)
+        - Red (stale)
+        - Not sure
+  - type: input
+    id: diag
+    attributes:
+      label: Diagnostic digits (only shown while the light is red)
+      description: "C=HTTP code the watch saw, E=error code, F=minutes since last background sync. A photo of your wrist works too."
+  - type: textarea
+    id: setup
+    attributes:
+      label: Companion setup
+      description: Where does your companion server run (Mac / Linux / NAS), and does opening https://<your-endpoint>/watch?token=... in a browser return JSON?
