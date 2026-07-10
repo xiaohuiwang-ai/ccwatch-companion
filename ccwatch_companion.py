@@ -154,12 +154,59 @@ class Handler(BaseHTTPRequestHandler):
         print(f"[{time.strftime('%H:%M:%S')}] {self.address_string()} {fmt % args}")
 
 
+def push_loop(url: str, token: str, interval: int) -> None:
+    """Hosted push mode: report raw usage to the free watch cloud every `interval` seconds.
+
+    Sends raw utilization + reset timestamps (NOT pre-formatted countdowns) so the
+    cloud can render fresh countdowns whenever the watch actually polls.
+    """
+    endpoint = f"{url.rstrip('/')}?t={token}"
+    print(f"ccwatch companion PUSH mode → {url} every {interval}s (Ctrl-C to stop)")
+    while True:
+        u = _usage_cached() or {}
+        payload = {
+            "five_hour": u.get("five_hour"),
+            "seven_day": u.get("seven_day"),
+            "five_hour_resets_at": u.get("five_hour_resets_at"),
+            "seven_day_resets_at": u.get("seven_day_resets_at"),
+            "busy": _busy_count(),
+        }
+        try:
+            req = urllib.request.Request(
+                endpoint, data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"}, method="POST")
+            ctx = ssl.create_default_context()
+            try:
+                urllib.request.urlopen(req, timeout=10, context=ctx).read()
+            except ssl.SSLError:
+                # IP-cert endpoints (the free hosted cloud uses a Let's Encrypt IP cert;
+                # some Python builds can't verify IP-SAN) — retry unverified rather than die.
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                urllib.request.urlopen(req, timeout=10, context=ctx).read()
+            print(f"[{time.strftime('%H:%M:%S')}] pushed 5h={payload['five_hour']} "
+                  f"7d={payload['seven_day']} busy={payload['busy']}")
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}] push failed ({type(e).__name__}: {e}) — will retry")
+        time.sleep(interval)
+
+
 def main():
-    ap = argparse.ArgumentParser(description="CcWatch companion server")
-    ap.add_argument("--token", required=True, help="shared secret the watch sends as ?t=")
+    ap = argparse.ArgumentParser(description="CcWatch companion (self-hosted serve OR hosted push)")
+    ap.add_argument("--token", required=True,
+                    help="serve mode: shared secret the watch sends as ?t= · "
+                         "push mode: your personal token from the hosted cloud")
     ap.add_argument("--port", type=int, default=8399)
     ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--push", metavar="URL", default="",
+                    help="hosted push mode: report usage to this /report endpoint "
+                         "(e.g. https://139.224.198.39/wc/report) instead of serving locally")
+    ap.add_argument("--interval", type=int, default=300,
+                    help="push mode report interval in seconds (default 300)")
     args = ap.parse_args()
+    if args.push:
+        push_loop(args.push, args.token, max(60, args.interval))
+        return
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     srv.watch_token = args.token  # type: ignore[attr-defined]
     print(f"ccwatch companion on http://{args.host}:{args.port}/watch?t=***  (Ctrl-C to stop)")

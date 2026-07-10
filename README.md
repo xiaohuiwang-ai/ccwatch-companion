@@ -1,11 +1,32 @@
 # CcWatch Companion
 
-Minimal self-hosted data source for the **CC Watch** Garmin watch face.
+Minimal data source for the **CC Watch** Garmin watch face.
 One Python file, stdlib only. It reads your Claude Code subscription usage
-(from the Claude Code login already on your Mac) and serves the tiny JSON
-endpoint the watch face polls every 10 minutes.
+(from the Claude Code login already on your Mac) and gets it to your watch —
+in one of two ways:
 
-## Quick start (macOS, Claude Code installed & logged in)
+| Mode | One-liner | Best for |
+|---|---|---|
+| **Hosted push** (recommended) | `--push <cloud>/wc/report --token <your-token>` | Zero setup — nothing to expose |
+| Self-hosted serve | `--token <secret> --port 8399` | You already run your own endpoint |
+
+## Hosted push mode (recommended)
+
+1. Open the free watch cloud <https://139.224.198.39/wc/> → **Create my token**
+   (the same token also serves Garmin sleep/dive data for the Dive Buddy faces).
+2. On the computer where Claude Code is logged in:
+
+```bash
+python3 ccwatch_companion.py --push https://139.224.198.39/wc/report --token <your-token>
+```
+
+3. Watch face settings: URL `https://139.224.198.39/wc/watch`, token `<your-token>`.
+
+It reports raw usage every 5 min (`--interval` to change); the cloud renders
+fresh reset-countdowns whenever the watch polls. Keep it running with
+`launchd` / `systemd` / a tmux pane — whatever you like.
+
+## Self-hosted serve mode
 
 ```bash
 python3 ccwatch_companion.py --token pick-a-secret --port 8399
@@ -13,7 +34,7 @@ python3 ccwatch_companion.py --token pick-a-secret --port 8399
 curl "http://localhost:8399/watch?t=pick-a-secret"
 ```
 
-## Expose it to your phone
+### Expose it to your phone
 
 The watch fetches through Garmin Connect Mobile on your phone, so the URL must
 be reachable from the phone's network. Any of:
