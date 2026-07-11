@@ -70,3 +70,8 @@ Garmin Connect Mobile → your device → Connect IQ apps → **CC Watch** → S
 
 Anything speaking this contract works — the reference ccbridge hub serves a
 richer version of the same endpoint.
+
+## Support
+
+Free and open source. If it's useful, you can
+[buy me a coffee ☕](https://ko-fi.com/xiaohuiwang).
