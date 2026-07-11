@@ -10,21 +10,36 @@ in one of two ways:
 | **Hosted push** (recommended) | `--push <cloud>/wc/report --token <your-token>` | Zero setup — nothing to expose |
 | Self-hosted serve | `--token <secret> --port 8399` | You already run your own endpoint |
 
+**Platforms**: macOS ✅ (token read from the Keychain) · Linux ✅ (reads
+`~/.claude/.credentials.json`) · native Windows ❌ (use WSL). Either way the
+machine must have Claude Code logged in.
+
 ## Hosted push mode (recommended)
 
-1. Open the free watch cloud <https://139.224.198.39/wc/> → **Create my token**
-   (the same token also serves Garmin sleep/dive data for the Dive Buddy faces).
+1. Open the free watch cloud <https://139.224.198.39/wc/cc> and either type the
+   pairing code shown on the watch face, or click **Create my token**.
 2. On the computer where Claude Code is logged in:
 
 ```bash
 python3 ccwatch_companion.py --push https://139.224.198.39/wc/report --token <your-token>
 ```
 
-3. Watch face settings: URL `https://139.224.198.39/wc/watch`, token `<your-token>`.
+3. Watch face settings: URL `https://139.224.198.39/wc/watch`, token `<your-token>`
+   (faces paired with a code configure themselves — skip this step).
 
 It reports raw usage every 5 min (`--interval` to change); the cloud renders
-fresh reset-countdowns whenever the watch polls. Keep it running with
-`launchd` / `systemd` / a tmux pane — whatever you like.
+fresh reset-countdowns whenever the watch polls.
+
+### Keep it running (one command)
+
+```bash
+python3 ccwatch_companion.py --push https://139.224.198.39/wc/report --token <your-token> --install
+```
+
+Installs a background service (macOS launchd / Linux systemd user unit) that
+starts at login and restarts if it dies — survives reboots and closed laptop
+lids. `--uninstall` removes it. Prefer manual? tmux / a spare terminal tab
+works too.
 
 ## Self-hosted serve mode
 

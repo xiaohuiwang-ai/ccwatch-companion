@@ -15,13 +15,18 @@ watch face settings:
     Hub /watch URL  = https://your-host/watch
     Watch token     = <your-secret>
 
-Requirements: macOS with Claude Code logged in (token read from Keychain).
+Requirements: macOS (token read from Keychain) or Linux (~/.claude/.credentials.json)
+with Claude Code logged in. Native Windows is not supported (WSL works).
 Stdlib only — no pip installs.
+
+Keep it running across reboots with one command (installs launchd/systemd service):
+    python3 ccwatch_companion.py --push <cloud>/wc/report --token <token> --install
 """
 from __future__ import annotations
-import argparse, json, re, ssl, subprocess, time, urllib.request
+import argparse, json, os, re, ssl, subprocess, sys, time, urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 KEYCHAIN_SERVICE = "Claude Code-credentials"
@@ -32,11 +37,20 @@ _cache: dict = {"ts": 0.0, "data": None}
 
 
 def _oauth_token() -> str | None:
+    # macOS: Claude Code stores credentials in the login Keychain
     try:
         raw = subprocess.check_output(
             ["security", "find-generic-password", "-s", KEYCHAIN_SERVICE, "-w"],
             timeout=3, stderr=subprocess.DEVNULL,
         ).decode().strip()
+        tok = json.loads(raw).get("claudeAiOauth", {}).get("accessToken")
+        if tok:
+            return tok
+    except Exception:
+        pass
+    # Linux (and some setups): plain credentials file, same JSON shape
+    try:
+        raw = Path.home().joinpath(".claude", ".credentials.json").read_text()
         return json.loads(raw).get("claudeAiOauth", {}).get("accessToken")
     except Exception:
         return None
@@ -191,9 +205,96 @@ def push_loop(url: str, token: str, interval: int) -> None:
         time.sleep(interval)
 
 
+SERVICE_NAME = "com.ccwatch.companion"
+
+
+def _install_service(push_url: str, token: str, interval: int) -> None:
+    """Install a keep-alive background service so the reporter survives reboots/laptop-lid.
+    macOS → launchd LaunchAgent · Linux → systemd user unit. Re-running replaces the old one."""
+    script = str(Path(__file__).resolve())
+    py = sys.executable or "python3"
+    argv = [py, script, "--push", push_url, "--token", token, "--interval", str(interval)]
+    if sys.platform == "darwin":
+        plist = Path.home() / "Library/LaunchAgents" / f"{SERVICE_NAME}.plist"
+        logf = Path.home() / "Library/Logs/ccwatch-companion.log"
+        args_xml = "\n".join(f"      <string>{a}</string>" for a in argv)
+        plist.parent.mkdir(parents=True, exist_ok=True)
+        plist.write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>{SERVICE_NAME}</string>
+  <key>ProgramArguments</key><array>
+{args_xml}
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>{logf}</string>
+  <key>StandardErrorPath</key><string>{logf}</string>
+</dict></plist>
+""")
+        uid = os.getuid()
+        subprocess.run(["launchctl", "bootout", f"gui/{uid}", str(plist)],
+                       capture_output=True)  # replace old install, ok if absent
+        r = subprocess.run(["launchctl", "bootstrap", f"gui/{uid}", str(plist)],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            print(f"launchctl bootstrap failed: {r.stderr.strip()}")
+            sys.exit(1)
+        print(f"✓ installed launchd service {SERVICE_NAME}\n  runs at login, restarts if it dies"
+              f"\n  log: {logf}\n  uninstall: python3 {script} --uninstall")
+    elif sys.platform.startswith("linux"):
+        unit = Path.home() / ".config/systemd/user" / "ccwatch-companion.service"
+        unit.parent.mkdir(parents=True, exist_ok=True)
+        exec_line = " ".join(f'"{a}"' if " " in a else a for a in argv)
+        unit.write_text(f"""[Unit]
+Description=CcWatch companion usage reporter
+
+[Service]
+ExecStart={exec_line}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+""")
+        for cmd in (["systemctl", "--user", "daemon-reload"],
+                    ["systemctl", "--user", "enable", "--now", "ccwatch-companion"]):
+            r = subprocess.run(cmd, capture_output=True, text=True)
+            if r.returncode != 0:
+                print(f"{' '.join(cmd)} failed: {r.stderr.strip()}")
+                sys.exit(1)
+        print("✓ installed systemd user service ccwatch-companion\n"
+              f"  status: systemctl --user status ccwatch-companion\n"
+              f"  uninstall: python3 {script} --uninstall")
+    else:
+        print("--install supports macOS (launchd) and Linux (systemd) only.\n"
+              "On other systems keep the --push command running yourself.")
+        sys.exit(1)
+
+
+def _uninstall_service() -> None:
+    if sys.platform == "darwin":
+        plist = Path.home() / "Library/LaunchAgents" / f"{SERVICE_NAME}.plist"
+        subprocess.run(["launchctl", "bootout", f"gui/{os.getuid()}", str(plist)],
+                       capture_output=True)
+        if plist.exists():
+            plist.unlink()
+        print(f"✓ removed {SERVICE_NAME}")
+    elif sys.platform.startswith("linux"):
+        subprocess.run(["systemctl", "--user", "disable", "--now", "ccwatch-companion"],
+                       capture_output=True)
+        unit = Path.home() / ".config/systemd/user" / "ccwatch-companion.service"
+        if unit.exists():
+            unit.unlink()
+        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+        print("✓ removed ccwatch-companion")
+    else:
+        print("nothing to uninstall on this platform")
+
+
 def main():
     ap = argparse.ArgumentParser(description="CcWatch companion (self-hosted serve OR hosted push)")
-    ap.add_argument("--token", required=True,
+    ap.add_argument("--token",
                     help="serve mode: shared secret the watch sends as ?t= · "
                          "push mode: your personal token from the hosted cloud")
     ap.add_argument("--port", type=int, default=8399)
@@ -203,7 +304,22 @@ def main():
                          "(e.g. https://139.224.198.39/wc/report) instead of serving locally")
     ap.add_argument("--interval", type=int, default=300,
                     help="push mode report interval in seconds (default 300)")
+    ap.add_argument("--install", action="store_true",
+                    help="with --push/--token: install a background service (launchd/systemd) "
+                         "so the reporter keeps running after reboot, then exit")
+    ap.add_argument("--uninstall", action="store_true",
+                    help="remove the background service installed by --install")
     args = ap.parse_args()
+    if args.uninstall:
+        _uninstall_service()
+        return
+    if not args.token:
+        ap.error("--token is required")
+    if args.install:
+        if not args.push:
+            ap.error("--install needs --push URL (hosted push mode)")
+        _install_service(args.push, args.token, max(60, args.interval))
+        return
     if args.push:
         push_loop(args.push, args.token, max(60, args.interval))
         return
