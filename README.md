@@ -45,14 +45,11 @@ python3 ccwatch_companion.py --push https://watch.xiaohuiwangai.cn/wc/report --t
 
 装成后台服务(macOS launchd / Linux systemd 用户单元),开机自启、挂了自动拉起。`--uninstall` 卸载。
 
-## 🔄 数据多久更新一次
+## 🔄 数据什么时候到
 
-| 环节 | 频率 |
-|---|---|
-| companion 上报 Claude 用量 | **每 5 分钟**(`--interval` 可调) |
-| 表盘从云端刷新 | 约每 10 分钟(佳明后台周期) |
-| 睡眠/身体数据(云端拉佳明) | 小时级自动;仪表盘有「立即同步」 |
-| companion 超 20 分钟没上报 | Claude 环显示 "?"(其他数据不受影响) |
+- **Claude 环**:电脑上的 companion 每 5 分钟上报,表盘约 10 分钟内跟上;companion 停报超 20 分钟,环显示 "?"
+- **睡眠**:醒后 1-2 小时内自动出现(手表需同步到佳明 App)
+- **急**:网页面板有「🔄 立即同步」按钮,点了约 10 秒出数
 
 ## 自托管模式
 

@@ -47,14 +47,11 @@ starts at login and restarts if it dies — survives reboots and closed laptop
 lids. `--uninstall` removes it. Prefer manual? tmux / a spare terminal tab
 works too.
 
-## 🔄 How often does data refresh
+## 🔄 When does data arrive
 
-| Stage | Cadence |
-|---|---|
-| Companion reports Claude usage | **every 5 min** (`--interval`) |
-| Watch face refresh | ~every 10 min (Garmin background cycle) |
-| Sleep/body data (cloud pulls Garmin) | hourly-ish; "Sync now" on the dashboard |
-| Companion silent > 20 min | Claude rings show "?" (other data unaffected) |
+- **Claude rings**: the companion reports every 5 min; the face follows within ~10 min; silent > 20 min shows "?"
+- **Sleep**: appears within 1-2 hours of waking (once the watch has synced to the Garmin app)
+- **In a hurry**: "🔄 Sync now" on the web dashboard — fresh data in ~10 seconds
 
 ## Self-hosted serve mode
 
