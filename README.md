@@ -1,82 +1,69 @@
-# CcWatch Companion
+# CcWatch — Claude Code 上手腕
 
-> 📖 **Install guide / 安装指导**: [中文](INSTALL.md) · [English](INSTALL.en.md)
+**中文** · [English](README.en.md)
 
-Minimal data source for the **CC Watch** Garmin watch face.
-One Python file, stdlib only. It reads your Claude Code subscription usage
-(from the Claude Code login already on your Mac) and gets it to your watch —
-in one of two ways:
+![CcWatch](docs/hero.png)
 
-| Mode | One-liner | Best for |
+**CcWatch** 是给 Claude Code 用户的佳明表盘(Descent G2):抬腕看 **Claude 额度环**(5 小时窗口 + 每周用量 + 重置倒计时)+ 睡眠/身体数据 + 忙碌小螃蟹(有 `claude` 进程在跑时它就敲鼓)。
+
+> 📖 **安装指导**:[中文](INSTALL.md) · [English](INSTALL.en.md)
+
+## 表盘显示什么
+
+- `5H 12% 3H33M` —— 5 小时窗口:已用 % + 距重置时间
+- `7D 64% 2D13H` —— 每周窗口:已用 % + 距重置时间
+- 像素小螃蟹:有 `claude` CLI 进程在跑时打鼓
+- 链路灯:绿 = 数据新鲜(<25 分钟)· 黄 <60 分钟 · 红 = 断了
+
+## 本仓是什么:companion(额度数据源)
+
+单文件 Python、纯标准库。它在你登录了 Claude Code 的电脑上读订阅用量,推给手表。两种模式:
+
+| 模式 | 一行命令 | 适合 |
 |---|---|---|
-| **Hosted push** (recommended) | `--push <cloud>/wc/report --token <your-token>` | Zero setup — nothing to expose |
-| Self-hosted serve | `--token <secret> --port 8399` | You already run your own endpoint |
+| **云端推送(推荐)** | `--push <cloud>/wc/report --token <你的token>` | 零暴露零运维 |
+| 自托管 | `--token <secret> --port 8399` | 你已有自己的端点 |
 
-**Platforms**: macOS ✅ (token read from the Keychain) · Linux ✅ (reads
-`~/.claude/.credentials.json`) · native Windows ❌ (use WSL). Either way the
-machine must have Claude Code logged in.
+**平台**:macOS ✅(从钥匙串读 token)· Linux ✅(读 `~/.claude/.credentials.json`)· 原生 Windows ❌(用 WSL)。前提:这台电脑登录着 Claude Code。
 
-## Hosted push mode (recommended)
+## 云端推送模式(推荐)
 
-1. Open the free watch cloud <https://watch.xiaohuiwangai.cn/wc/cc> and either type the
-   pairing code shown on the watch face, or click **Create my token**.
-2. On the computer where Claude Code is logged in:
+1. 打开免费手表云 <https://watch.xiaohuiwangai.cn/wc/cc>,输入表盘上的配对码(或点一键拿 token)
+2. 在登录了 Claude Code 的电脑上:
 
 ```bash
-python3 ccwatch_companion.py --push https://watch.xiaohuiwangai.cn/wc/report --token <your-token>
+python3 ccwatch_companion.py --push https://watch.xiaohuiwangai.cn/wc/report --token <你的token>
 ```
 
-3. Watch face settings: URL `https://watch.xiaohuiwangai.cn/wc/watch`, token `<your-token>`
-   (faces paired with a code configure themselves — skip this step).
+3. 配对码激活的表盘会自动配好,无需手动填设置
 
-It reports raw usage every 5 min (`--interval` to change); the cloud renders
-fresh reset-countdowns whenever the watch polls.
-
-### Keep it running (one command)
+### 常驻运行(一条命令)
 
 ```bash
-python3 ccwatch_companion.py --push https://watch.xiaohuiwangai.cn/wc/report --token <your-token> --install
+python3 ccwatch_companion.py --push https://watch.xiaohuiwangai.cn/wc/report --token <你的token> --install
 ```
 
-Installs a background service (macOS launchd / Linux systemd user unit) that
-starts at login and restarts if it dies — survives reboots and closed laptop
-lids. `--uninstall` removes it. Prefer manual? tmux / a spare terminal tab
-works too.
+装成后台服务(macOS launchd / Linux systemd 用户单元),开机自启、挂了自动拉起。`--uninstall` 卸载。
 
-## Self-hosted serve mode
+## 🔄 数据多久更新一次
+
+| 环节 | 频率 |
+|---|---|
+| companion 上报 Claude 用量 | **每 5 分钟**(`--interval` 可调) |
+| 表盘从云端刷新 | 约每 10 分钟(佳明后台周期) |
+| 睡眠/身体数据(云端拉佳明) | 小时级自动;仪表盘有「立即同步」 |
+| companion 超 20 分钟没上报 | Claude 环显示 "?"(其他数据不受影响) |
+
+## 自托管模式
 
 ```bash
 python3 ccwatch_companion.py --token pick-a-secret --port 8399
-# test:
 curl "http://localhost:8399/watch?t=pick-a-secret"
 ```
 
-### Expose it to your phone
+手机侧要能访问该 URL(表盘经手机 Garmin Connect 取数):Tailscale Funnel / Cloudflare Tunnel / 自己的反代均可。表盘设置里填 URL + token(Garmin Connect Mobile → 设备 → Connect IQ 应用 → CC Watch → 设置)。
 
-The watch fetches through Garmin Connect Mobile on your phone, so the URL must
-be reachable from the phone's network. Any of:
-
-- **Tailscale Funnel / Serve** (easiest HTTPS)
-- **Cloudflare Tunnel**
-- Your own reverse proxy / VPS port-forward
-
-## Point the watch face at it
-
-Garmin Connect Mobile → your device → Connect IQ apps → **CC Watch** → Settings:
-
-| Setting | Value |
-|---|---|
-| Hub /watch URL | `https://your-host/watch` |
-| Watch token | `pick-a-secret` |
-
-## What the face shows
-
-- `5H 12% 3H33M` — five-hour window: used % + time to reset
-- `7D 64% 2D13H` — weekly window: used % + time to reset
-- Pixel crab drums while `busy > 0` (count of running `claude` CLI processes)
-- Link light: green = data fresh (<25 min), yellow <60 min, red = stale/broken
-
-## Payload contract (`GET /watch?t=<token>`)
+## 数据契约(`GET /watch?t=<token>`)
 
 ```json
 {"ok": true, "ts": 1783500000,
@@ -85,10 +72,8 @@ Garmin Connect Mobile → your device → Connect IQ apps → **CC Watch** → S
  "busy": 1, "pending": 0, "done_str": ""}
 ```
 
-Anything speaking this contract works — the reference ccbridge hub serves a
-richer version of the same endpoint.
+任何实现此契约的端点都能用。
 
-## Support
+## 支持
 
-Free and open source. If it's useful, you can
-[buy me a coffee ☕](https://ko-fi.com/xiaohuiwang).
+免费开源。觉得有用可以[请我喝杯咖啡 ☕](https://ko-fi.com/xiaohuiwang)。
