@@ -26,7 +26,7 @@ On first use the face shows **PAIR CODE + 6 digits**.
 1. Open **watch.xiaohuiwangai.cn/cc** on your phone and follow the stepper
 2. At step 2, enter the 6-digit code — your private account is created automatically (the step-1 token is generated at the same time)
 3. Step 3 — link your Garmin account (on the account page): China or International region, Garmin credentials (used once, **never stored**; 2FA supported)
-4. Leave the watch alone: it activates within 10 minutes, sleep/body data appears within ~20-30 minutes
+4. Leave the watch alone: it activates within 10 minutes; sleep/body data appears within ~1-2 hours after you wake up (your watch needs to sync to the Garmin Connect app first)
 
 ## Optional: Claude usage rings (needs your computer)
 
@@ -51,5 +51,6 @@ Your token is shown on the watch.xiaohuiwangai.cn/cc account page. Without the c
 | OpenMTP does not see the watch | Original cable; replug once |
 | Claude rings show "?" | Companion not running, or no report for 20+ min |
 | Data shows "--" | First pull can take up to 30 min |
+| When does data arrive | Sleep/body data: within 1-2 h of waking (your watch needs to sync to the Garmin Connect app first). In a hurry: "Sync now" on the web dashboard (~10 s) |
 
 Issues: https://github.com/xiaohuiwang-ai/ccwatch-companion
