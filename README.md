@@ -1,5 +1,7 @@
 # CcWatch Companion
 
+> 📖 **中文安装指导(表盘安装+配对激活+companion)**: [INSTALL.md](INSTALL.md)
+
 Minimal data source for the **CC Watch** Garmin watch face.
 One Python file, stdlib only. It reads your Claude Code subscription usage
 (from the Claude Code login already on your Mac) and gets it to your watch —
