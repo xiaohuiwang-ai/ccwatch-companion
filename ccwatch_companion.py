@@ -301,7 +301,7 @@ def main():
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--push", metavar="URL", default="",
                     help="hosted push mode: report usage to this /report endpoint "
-                         "(e.g. https://139.224.198.39/wc/report) instead of serving locally")
+                         "(e.g. https://watch.xiaohuiwangai.cn/wc/report) instead of serving locally")
     ap.add_argument("--interval", type=int, default=300,
                     help="push mode report interval in seconds (default 300)")
     ap.add_argument("--install", action="store_true",

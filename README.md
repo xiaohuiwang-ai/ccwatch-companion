@@ -16,15 +16,15 @@ machine must have Claude Code logged in.
 
 ## Hosted push mode (recommended)
 
-1. Open the free watch cloud <https://139.224.198.39/wc/cc> and either type the
+1. Open the free watch cloud <https://watch.xiaohuiwangai.cn/wc/cc> and either type the
    pairing code shown on the watch face, or click **Create my token**.
 2. On the computer where Claude Code is logged in:
 
 ```bash
-python3 ccwatch_companion.py --push https://139.224.198.39/wc/report --token <your-token>
+python3 ccwatch_companion.py --push https://watch.xiaohuiwangai.cn/wc/report --token <your-token>
 ```
 
-3. Watch face settings: URL `https://139.224.198.39/wc/watch`, token `<your-token>`
+3. Watch face settings: URL `https://watch.xiaohuiwangai.cn/wc/watch`, token `<your-token>`
    (faces paired with a code configure themselves — skip this step).
 
 It reports raw usage every 5 min (`--interval` to change); the cloud renders
@@ -33,7 +33,7 @@ fresh reset-countdowns whenever the watch polls.
 ### Keep it running (one command)
 
 ```bash
-python3 ccwatch_companion.py --push https://139.224.198.39/wc/report --token <your-token> --install
+python3 ccwatch_companion.py --push https://watch.xiaohuiwangai.cn/wc/report --token <your-token> --install
 ```
 
 Installs a background service (macOS launchd / Linux systemd user unit) that
